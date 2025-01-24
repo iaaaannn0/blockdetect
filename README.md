@@ -36,20 +36,9 @@ Enter the domain to test: example.com
 
 The tool will analyze the domain and display the results in a clear and intuitive table.
 
-## Example Output
-
-Here's an example of the output table:
-
-| Method           | Evidence                                        |
-|------------------|------------------------------------------------|
-| DNS Pollution    | Resolved IPs: 198.18.13.203 (polluted) |
-| IP Blocking      | IP 31.13.72.174 is reachable.   |
-| DPI              | Potential DPI blocking detected.    |
-| Fake Packets     | No response received; possible filtering. |
-| HTTP Tampering   | HTTP returned status code: 503.     |
 
 ## Screenshots
-<img width="629" alt="image" src="https://github.com/user-attachments/assets/ca6412e2-e0bc-4041-9bf3-4a3561d5ec05" />
+<img width="925" alt="image" src="https://github.com/user-attachments/assets/2e28d292-86c1-4d73-a3fd-f325661d5b96" />
 
 
 
