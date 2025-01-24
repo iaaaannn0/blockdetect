@@ -8,7 +8,9 @@ import ssl
 import time
 import os
 
+# If you need traceroute capabilities:
 from scapy.layers.inet import traceroute
+
 from rich.console import Console
 from rich.table import Table
 
@@ -27,9 +29,11 @@ USER_AGENTS = [
     "curl/7.68.0"
 ]
 
+
 def check_dns_pollution(domain):
     """
-    Use multiple public DNS servers to resolve the domain, returning results or errors.
+    Use multiple public DNS servers to resolve the domain,
+    returning a dict of IPs or error messages.
     """
     results = {}
     for server in DNS_SERVERS:
@@ -48,24 +52,29 @@ def check_dns_pollution(domain):
             results[server] = f"Error: {e}"
     return results
 
+
 def analyze_dns_pollution(domain, dns_query_results):
     """
-    Analyze DNS query results to detect potential DNS pollution.
+    Analyze the DNS query results to detect inconsistencies
+    or suspicious IP returns that may indicate DNS pollution.
     """
     ip_sets = []
     for server, result in dns_query_results.items():
         if isinstance(result, list):
             ip_sets.append(set(result))
 
+    # If no successful DNS queries
     if not ip_sets:
         return ("All DNS queries failed; possibly pollution or invalid domain.", True, "DNS Pollution")
 
     combined_ips = set.union(*ip_sets)
-    # If the number of distinct IPs is large, it may be suspicious.
+    # Example threshold for suspiciously high IP count
     if len(combined_ips) > 5:
         return (f"Significant discrepancy among DNS results: {combined_ips}", True, "DNS Pollution")
 
+    # Otherwise, treat them as consistent enough
     return (f"DNS results appear consistent: {dns_query_results}", False, "Success")
+
 
 def check_ip_block(domain):
     """
@@ -75,7 +84,7 @@ def check_ip_block(domain):
         ip = socket.gethostbyname(domain)
     except socket.gaierror:
         return ("Failed to resolve domain.", True, "IP Blocking")
-    
+
     results = {}
     blocked_ports = []
     for port in PORTS:
@@ -92,16 +101,19 @@ def check_ip_block(domain):
             results[port] = f"Port {port} seems blocked."
             blocked_ports.append(port)
 
+    # If all tested ports are blocked
     is_blocked = (len(blocked_ports) == len(PORTS))
     return (results, is_blocked, "IP Blocking" if is_blocked else "Success")
 
+
 def check_icmp_ping(domain):
     """
-    Test ICMP ping to check reachability. Some servers may disable ping.
+    Test ICMP ping to check reachability.
+    Some servers may disable ping, so a failure might be inconclusive.
     """
     try:
         ip = socket.gethostbyname(domain)
-        # Platform-specific ping command
+        # Platform-specific param for ping count
         count_param = "-n" if platform.system().lower().startswith('win') else "-c"
         cmd = f"ping {count_param} 3 {ip}"
         exit_code = os.system(cmd)
@@ -112,29 +124,31 @@ def check_icmp_ping(domain):
     except Exception as e:
         return (f"Ping check error: {e}", True, "ICMP Blocking")
 
+
 def check_traceroute(domain):
     """
-    Run traceroute to see if traffic is blocked at a certain hop.
-    Requires administrator/root privileges in most cases.
+    Run traceroute to see if traffic is dropped or blocked at a certain hop.
+    Requires administrator/root privileges for scapy's raw packets.
     """
     try:
         ip = socket.gethostbyname(domain)
         ans, unans = traceroute(ip, maxttl=20, verbose=False)
         if not ans:
-            return ("Traceroute had no replies, possibly blocked.", True, "Traceroute Blocking")
+            return ("No traceroute response; may be dropped or blocked.", True, "Traceroute Possibly Blocked")
         else:
-            return ("Traceroute completed successfully.", False, "Success")
+            return ("Traceroute completed with some replies.", False, "Success")
     except PermissionError:
-        return ("Traceroute requires admin privileges.", True, "Traceroute Blocking")
+        return ("Traceroute requires admin privileges.", True, "Traceroute Possibly Blocked")
     except Exception as e:
-        return (f"Traceroute error: {e}", True, "Traceroute Blocking")
+        return (f"Traceroute error: {e}", True, "Traceroute Possibly Blocked")
+
 
 def check_dpi(domain):
     """
     Perform HTTP/HTTPS requests with random User-Agents to detect possible DPI blocking.
     """
     try:
-        ip = socket.gethostbyname(domain)
+        socket.gethostbyname(domain)
     except Exception as e:
         return (f"Domain resolve error: {e}", True, "DPI Blocking")
 
@@ -159,9 +173,10 @@ def check_dpi(domain):
 
     return (results, blocked, "DPI Blocking" if blocked else "Success")
 
+
 def check_tls_fingerprint(domain):
     """
-    Test TLS handshake to detect potential TLS fingerprint blocking.
+    Test TLS handshake for potential fingerprint-based blocking.
     """
     try:
         context = ssl.create_default_context()
@@ -176,19 +191,25 @@ def check_tls_fingerprint(domain):
     except Exception as e:
         return (f"TLS handshake failed: {e}", True, "TLS Fingerprinting")
 
+
 def check_sni_blocking(domain):
     """
-    Test with and without SNI to detect potential SNI-based blocking.
+    Test TLS handshake with normal SNI vs. empty SNI.
+    This can detect potential SNI-based blocking.
     """
     results = {}
     blocked = False
 
-    def tls_handshake(server_name=None):
+    def tls_handshake(server_name):
         try:
-            context = ssl.create_default_context()
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            # If we do not set check_hostname to False when server_name is None,
+            # Python's SSL may complain "check_hostname requires server_hostname".
+            if server_name is None:
+                context.check_hostname = False
+                context.verify_mode = ssl.CERT_NONE
+
             with socket.create_connection((domain, 443), timeout=3) as sock:
-                # Note: If server_hostname is None, some Python versions may raise an error
-                # because hostname checking might fail. This is part of the test.
                 with context.wrap_socket(sock, server_hostname=server_name) as ssock:
                     return True, "Handshake OK"
         except Exception as e:
@@ -208,9 +229,12 @@ def check_sni_blocking(domain):
 
     return (results, blocked, "SNI Blocking" if blocked else "Success")
 
+
 def detect_blocking(domain):
     """
     Main function that combines all checks.
+    Returns a dictionary of results:
+    { "Method": (analysis/evidence, is_blocked, technique) }
     """
     results = {}
 
@@ -245,6 +269,7 @@ def detect_blocking(domain):
 
     return results
 
+
 def display_results(domain, results):
     """
     Display detection results in a table using 'rich'.
@@ -256,16 +281,18 @@ def display_results(domain, results):
 
     for method, (evidence, is_blocked, technique) in results.items():
         color = "red" if is_blocked else "green"
+        # Convert evidence to string if it's a dict or list
         if isinstance(evidence, dict):
             evidence_str = "\n".join([f"{k}: {v}" for k, v in evidence.items()])
         elif isinstance(evidence, (list, tuple)):
             evidence_str = str(evidence)
         else:
             evidence_str = str(evidence)
-        
+
         table.add_row(method, f"[{color}]{evidence_str}[/{color}]", technique)
 
     console.print(table)
+
 
 if __name__ == "__main__":
     domain = input("Enter the domain to test: ").strip()
