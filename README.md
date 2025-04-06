@@ -1,52 +1,105 @@
-# blockdetect
+# Network Blocking Detection Tool
 
-**blockdetect** is an open-source tool designed to detect and analyze domain blocking methods. By simulating various network requests and analyzing responses, it identifies blocking techniques such as DNS pollution, IP blocking, Deep Packet Inspection (DPI), fake packets, and HTTP tampering.
+A comprehensive tool for detecting various types of network restrictions and blocking mechanisms. This tool can identify multiple types of network interference including:
+- DNS Pollution
+- IP Blocking
+- ICMP Blocking
+- DPI (Deep Packet Inspection)
+- TLS Fingerprinting
+- SNI Blocking
+- HTTP/HTTPS Blocking
+- SSL Certificate Issues
 
 ## Features
 
-- Detects and analyzes multiple domain blocking methods.
-- Provides evidence for each blocking method detected.
-- Highlights blocking techniques in a user-friendly table with color-coded outputs.
-- Supports DNS queries, HTTP requests, and packet-based inspections.
+- **Multi-DNS Server Check**: Tests against multiple public DNS servers to detect DNS pollution
+- **Port Scanning**: Checks common ports (80, 443, 8080) for accessibility
+- **HTTP/HTTPS Testing**: Tests multiple HTTP methods and protocols
+- **SSL/TLS Analysis**: Verifies SSL certificates and TLS handshake
+- **SNI Testing**: Detects SNI-based blocking
+- **Concurrent Testing**: Uses thread pools for faster detection
+- **Detailed Reporting**: Generates comprehensive JSON reports
+- **Progress Tracking**: Shows real-time progress of each test
+- **User-Agent Rotation**: Tests with different user agents to detect DPI
 
 ## Installation
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/iaaaannn0/blockdetect.git
-   cd blockdetect
-   ```
+1. First, install `just` command:
+   - macOS: `brew install just`
+   - Linux: Use your package manager
+   - Windows: Use scoop or chocolatey
 
-2. Install dependencies using `pip`:
+2. Install project dependencies:
    ```bash
-   pip install rich dnspython requests scapy
+   just install
    ```
 
 ## Usage
 
-Run the tool and enter a domain to test:
-```bash
-python3 test.py
-```
+1. Run a test:
+   ```bash
+   just test example.com
+   ```
 
-Example:
-```
-Enter the domain to test: example.com
-```
+2. View help:
+   ```bash
+   just help
+   ```
 
-The tool will analyze the domain and display the results in a clear and intuitive table.
+## Detection Methods
 
+The tool performs the following checks:
 
-## Screenshots
-<img width="925" alt="image" src="https://github.com/user-attachments/assets/2e28d292-86c1-4d73-a3fd-f325661d5b96" />
+1. **DNS Pollution Detection**
+   - Queries multiple DNS servers
+   - Compares results for inconsistencies
+   - Detects DNS redirection
 
+2. **IP Blocking Detection**
+   - Tests port accessibility
+   - Measures connection latency
+   - Identifies blocked ports
 
+3. **HTTP/HTTPS Testing**
+   - Tests multiple HTTP methods (GET, POST, HEAD)
+   - Checks both HTTP and HTTPS
+   - Measures response times
 
+4. **SSL/TLS Analysis**
+   - Verifies SSL certificate validity
+   - Checks TLS handshake
+   - Detects certificate issues
+
+5. **SNI Testing**
+   - Tests with and without SNI
+   - Detects SNI-based blocking
+
+## Output
+
+The tool provides:
+- Real-time progress updates
+- Color-coded results
+- Detailed JSON report
+- Summary table of findings
+
+## Requirements
+
+- Python 3.7+
+- Required Python packages (see requirements.txt)
+- Network connectivity
+- Root/Admin privileges for some tests (traceroute)
+
+## Notes
+
+- Some tests (like traceroute) require root/admin privileges
+- Results are saved in JSON format for further analysis
+- The tool uses multiple DNS servers for redundancy
+- Timeouts are configurable in the CONFIG dictionary
 
 ## Contributing
 
-Contributions are welcome! If you find issues or have suggestions, feel free to open an issue or submit a pull request.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.
